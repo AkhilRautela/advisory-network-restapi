@@ -24,9 +24,9 @@ def register_user(req):
         # print(len(jwt.encode({"het":"hello"},"secrethg")))
         credentials = {"name": name, "email": email, "password": password}
         token = jwt.encode(credentials, email)
-        # current_user=User(name=name,email=email,password=hashed_password)
-        # current_user.save()
-        return JsonResponse({"id": User.objects.all()[0].unique_id, "token": token})
+        current_user = User(name=name, email=email, password=hashed_password)
+        current_user.save()
+        return JsonResponse({"id": current_user.unique_id, "token": token})
 
     except:
 
@@ -38,11 +38,13 @@ def login_user(req):
     try:
         email = req.POST['email']
         password = req.POST['password']
-        print(email,password,datetime.datetime.now())
+        print(email, password, datetime.datetime.now())
         users = User.objects.get(email=email)
         print(users)
         if check_password(password, users.password):
-            return JsonResponse({"id":users.unique_id},status=200)
+            # Can't send the same token as it is required from client side to know wethere it is valid or not as token may get expired.
+            # I can implement it but I have to build frontened for testing it
+            return JsonResponse({"id": users.unique_id}, status=200)
     except:
         return HttpResponse(status=400)
     return HttpResponse(status=400)
@@ -62,12 +64,14 @@ def get_advisor(req, user_id):
     except:
         return HttpResponse(status=400)
 
+
 @csrf_exempt
-def book_advisor(req,user_id,advisor_id):
+def book_advisor(req, user_id, advisor_id):
     try:
-        booking_time=req.POST['booking-time']
-        date_time=datetime.datetime.strptime(booking_time, "%d-%m-%Y %H:%M")
-        booking=Booking(user_id=user_id,advisor_id=advisor_id,datetime=date_time)
+        booking_time = req.POST['booking-time']
+        date_time = datetime.datetime.strptime(booking_time, "%d-%m-%Y %H:%M")
+        booking = Booking(
+            user_id=user_id, advisor_id=advisor_id, datetime=date_time)
         booking.save()
         User.objects.get(unique_id=user_id)
         Advisor.objects.get(unique_id=advisor_id)
@@ -76,23 +80,23 @@ def book_advisor(req,user_id,advisor_id):
         return HttpResponse(status=400)
 
 
-def fetch_bookings(req,user_id):
+def fetch_bookings(req, user_id):
     try:
-        user_booking=Booking.objects.filter(user_id=user_id)
-        bookings=[]
+        user_booking = Booking.objects.filter(user_id=user_id)
+        bookings = []
         for x in user_booking:
             # print(x)
-            advisor=Advisor.objects.get(unique_id=x.advisor_id)
-            now={
-            "advisor name":advisor.name,
-            "photo url":advisor.url,
-            "User id":x.user_id,
-            "Advsor id":x.advisor_id,
-            "booking time":str(x.datetime.date())+" "+str(x.datetime.time()),
-            "booking id":x.unique_id
+            advisor = Advisor.objects.get(unique_id=x.advisor_id)
+            now = {
+                "advisor name": advisor.name,
+                "photo url": advisor.url,
+                "User id": x.user_id,
+                "Advsor id": x.advisor_id,
+                "booking time": str(x.datetime.date())+" "+str(x.datetime.time()),
+                "booking id": x.unique_id
             }
             bookings.append(now)
-        return JsonResponse({"bookings":bookings},status=200)
+        return JsonResponse({"bookings": bookings}, status=200)
     except:
         return HttpResponse(status=400)
 
